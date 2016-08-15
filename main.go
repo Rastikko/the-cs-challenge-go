@@ -1,7 +1,11 @@
 package main
 
-import "fmt"
+import (
+	"log"
+	"net/http"
+)
 
 func main() {
-    fmt.Printf("hello, world\n")
+	router := NewRouter()
+	log.Fatal(http.ListenAndServe(":8080", router))
 }
