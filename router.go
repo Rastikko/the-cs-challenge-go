@@ -1,26 +1,29 @@
 package main
 
 import (
-	"net/http"
-	"github.com/gorilla/mux"
+	"github.com/gorilla/pat"
+	"github.com/markbates/goth/gothic"
 )
 
-func NewRouter() *mux.Router {
+func NewRouter() *pat.Router {
 
-	router := mux.NewRouter().StrictSlash(true)
-	for _, route := range routes {
-		var handler http.Handler
+	p := pat.New()
+	p.Get("/auth/{provider}", gothic.BeginAuthHandler)
+	p.Get("/auth/{provider}/callback", AuthCallback)
 
-		handler = route.HandlerFunc
-		handler = Logger(handler, route.Name)
+	// for _, route := range routes {
+	// 	var handler http.Handler
+	//
+	// 	handler = route.HandlerFunc
+	// 	handler = Logger(handler, route.Name)
+	//
+	// 	router.
+	// 		Methods(route.Method).
+	// 		Path(route.Pattern).
+	// 		Name(route.Name).
+	// 		Handler(handler)
+	//
+	// }
 
-		router.
-			Methods(route.Method).
-			Path(route.Pattern).
-			Name(route.Name).
-			Handler(handler)
-
-	}
-
-	return router
+	return p
 }

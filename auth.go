@@ -2,27 +2,13 @@ package main
 
 import (
 	"fmt"
-	"net/http"
-)
-
-func Auth(w http.ResponseWriter, r *http.Request) {
-	fmt.Fprint(w, "Welcome!\n")
-}
-
-
-
-package main
-
-import (
-	"fmt"
 	"html/template"
 	"net/http"
 	"os"
 
-	"sort"
-
-	"github.com/gorilla/pat"
 	"github.com/gorilla/sessions"
+	"github.com/markbates/goth"
+	"github.com/markbates/goth/gothic"
 	"github.com/markbates/goth/providers/linkedin"
 )
 
@@ -30,50 +16,23 @@ func init() {
 	gothic.Store = sessions.NewFilesystemStore(os.TempDir(), []byte("goth-example"))
 }
 
-func main() {
-	goth.UseProviders(
-		linkedin.New(os.Getenv("LINKEDIN_KEY"), os.Getenv("LINKEDIN_SECRET"), "http://localhost:3000/auth/linkedin/callback"),
-	)
-
-	m := make(map[string]string)
-	m["linkedin"] = "Linkedin"
-
-	var keys []string
-	for k := range m {
-		keys = append(keys, k)
+func AuthCallback(w http.ResponseWriter, r *http.Request) {
+	fmt.Fprintln(w, "ASDASDASDSDAS")
+	fmt.Fprintln(w, r.URL.Query().Get("provider"))
+	user, err := gothic.CompleteUserAuth(w, r)
+	if err != nil {
+		fmt.Fprintln(w, err)
+		return
 	}
-	sort.Strings(keys)
-
-	providerIndex := &ProviderIndex{Providers: keys, ProvidersMap: m}
-
-	p := pat.New()
-	p.Get("/auth/{provider}/callback", func(res http.ResponseWriter, req *http.Request) {
-
-		user, err := gothic.CompleteUserAuth(res, req)
-		if err != nil {
-			fmt.Fprintln(res, err)
-			return
-		}
-		t, _ := template.New("foo").Parse(userTemplate)
-		t.Execute(res, user)
-	})
-
-	p.Get("/auth/{provider}", gothic.BeginAuthHandler)
-	p.Get("/", func(res http.ResponseWriter, req *http.Request) {
-		t, _ := template.New("foo").Parse(indexTemplate)
-		t.Execute(res, providerIndex)
-	})
-	http.ListenAndServe(":3000", p)
+	t, _ := template.New("foo").Parse(userTemplate)
+	t.Execute(w, user)
 }
 
-type ProviderIndex struct {
-	Providers    []string
-	ProvidersMap map[string]string
+func AuthMain() {
+	goth.UseProviders(
+		linkedin.New(os.Getenv("75ee4zo80mit43"), os.Getenv("f5dY7jePaCsQfQT0"), "http://localhost:8080/auth/linkedin/callback"),
+	)
 }
-
-var indexTemplate = `{{range $key,$value:=.Providers}}
-    <p><a href="/auth/{{$value}}">Log in with {{index $.ProvidersMap $value}}</a></p>
-{{end}}`
 
 var userTemplate = `
 <p>Name: {{.Name}} [{{.LastName}}, {{.FirstName}}]</p>
@@ -85,4 +44,4 @@ var userTemplate = `
 <p>UserID: {{.UserID}}</p>
 <p>AccessToken: {{.AccessToken}}</p>
 <p>ExpiresAt: {{.ExpiresAt}}</p>
-<p>RefreshToken: {{.RefreshToken}}</p>
+<p>RefreshToken: {{.RefreshToken}}</p>`
