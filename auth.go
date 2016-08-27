@@ -12,13 +12,9 @@ import (
 	"github.com/markbates/goth/providers/linkedin"
 )
 
-func init() {
-	gothic.Store = sessions.NewFilesystemStore(os.TempDir(), []byte("goth-example"))
-}
-
 func AuthCallback(w http.ResponseWriter, r *http.Request) {
-	fmt.Fprintln(w, "ASDASDASDSDAS")
-	fmt.Fprintln(w, r.URL.Query().Get("provider"))
+	fmt.Println("ASDASDASDSDAS")
+	fmt.Println(r.URL.Query().Get("provider"))
 	user, err := gothic.CompleteUserAuth(w, r)
 	if err != nil {
 		fmt.Fprintln(w, err)
@@ -29,8 +25,9 @@ func AuthCallback(w http.ResponseWriter, r *http.Request) {
 }
 
 func AuthMain() {
+	gothic.Store = sessions.NewFilesystemStore(os.TempDir(), []byte("goth-example"))
 	goth.UseProviders(
-		linkedin.New(os.Getenv("75ee4zo80mit43"), os.Getenv("f5dY7jePaCsQfQT0"), "http://localhost:8080/auth/linkedin/callback"),
+		linkedin.New("75ee4zo80mit43", "f5dY7jePaCsQfQT0", "http://localhost:8080/auth/linkedin/callback"),
 	)
 }
 
