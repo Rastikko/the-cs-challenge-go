@@ -61,11 +61,4 @@ func AuthSession(w http.ResponseWriter, r *http.Request) {
 
 	}
 
-	// user, err := gothic.CompleteUserAuth(w, r)
-	// if err != nil {
-	// 	fmt.Fprintln(w, err)
-	// 	return
-	// }
-	// t, _ := template.New("foo").Parse(userTemplate)
-	// t.Execute(w, user)
 }
