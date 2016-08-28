@@ -1,44 +1,71 @@
 package main
 
 import (
+	"encoding/json"
+	"encoding/xml"
 	"fmt"
-	"html/template"
+	"github.com/parnurzeal/gorequest"
 	"net/http"
-	"os"
-
-	"github.com/gorilla/sessions"
-	"github.com/markbates/goth"
-	"github.com/markbates/goth/gothic"
-	"github.com/markbates/goth/providers/linkedin"
 )
 
-func AuthCallback(w http.ResponseWriter, r *http.Request) {
+type AccessToken struct {
+	Token string `json:"access_token"`
+}
+
+type ApiPerson struct {
+	Id        string `xml:"id"`
+	FirstName string `xml:"first-name"`
+	LastName  string `xml:"last-name"`
+}
+
+type ToriiResponse struct {
+	Id string `json:"id"`
+	FirstName string `json:"first-name"`
+	LastName string `json:"last-name"`
+}
+
+func AuthSession(w http.ResponseWriter, r *http.Request) {
+	w.Header().Set("Access-Control-Allow-Origin", "*")
+
 	fmt.Println("ASDASDASDSDAS")
 	fmt.Println(r.URL.Query().Get("provider"))
-	user, err := gothic.CompleteUserAuth(w, r)
-	if err != nil {
-		fmt.Fprintln(w, err)
-		return
+	fmt.Println(r.URL.Query().Get("auth-code"))
+
+	authCode := r.URL.Query().Get("auth-code")
+
+	_, body, _ := gorequest.New().Post("https://www.linkedin.com/uas/oauth2/accessToken").
+		Send(`grant_type=authorization_code&code=` + authCode + `&redirect_uri=http://localhost:4200/callback&client_id=75ee4zo80mit43&client_secret=f5dY7jePaCsQfQT0`).
+		End()
+
+	fmt.Println("resp", body)
+
+	var at AccessToken
+	err := json.Unmarshal([]byte(body), &at)
+
+	if err == nil {
+		_, bodyPerson, _ := gorequest.New().Get("https://api.linkedin.com/v1/people/~").
+			Set("Authorization", "Bearer "+at.Token).
+			End()
+
+		fmt.Println(bodyPerson)
+
+		var person ApiPerson
+
+		err := xml.Unmarshal([]byte(bodyPerson), &person)
+
+		if err == nil {
+			fmt.Println("OK!")
+			fmt.Println(person)
+			json.NewEncoder(w).Encode(ToriiResponse{Id: person.Id, FirstName: person.FirstName, LastName: person.LastName})
+		}
+
 	}
-	t, _ := template.New("foo").Parse(userTemplate)
-	t.Execute(w, user)
-}
 
-func AuthMain() {
-	gothic.Store = sessions.NewFilesystemStore(os.TempDir(), []byte("goth-example"))
-	goth.UseProviders(
-		linkedin.New("75ee4zo80mit43", "f5dY7jePaCsQfQT0", "http://localhost:8080/auth/linkedin/callback"),
-	)
+	// user, err := gothic.CompleteUserAuth(w, r)
+	// if err != nil {
+	// 	fmt.Fprintln(w, err)
+	// 	return
+	// }
+	// t, _ := template.New("foo").Parse(userTemplate)
+	// t.Execute(w, user)
 }
-
-var userTemplate = `
-<p>Name: {{.Name}} [{{.LastName}}, {{.FirstName}}]</p>
-<p>Email: {{.Email}}</p>
-<p>NickName: {{.NickName}}</p>
-<p>Location: {{.Location}}</p>
-<p>AvatarURL: {{.AvatarURL}} <img src="{{.AvatarURL}}"></p>
-<p>Description: {{.Description}}</p>
-<p>UserID: {{.UserID}}</p>
-<p>AccessToken: {{.AccessToken}}</p>
-<p>ExpiresAt: {{.ExpiresAt}}</p>
-<p>RefreshToken: {{.RefreshToken}}</p>`
